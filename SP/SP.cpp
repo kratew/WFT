@@ -39,7 +39,8 @@ DWORD WINAPI ProcessClient(LPVOID arg) {
 	SOCKADDR_IN clientaddr;
 	int addrlen;
 	char buf[BUFSIZE + 1];
-	unsigned int count;
+	unsigned int count, per;
+	BOOL checkPer = FALSE;
 	char timeBuffer[80];
 	clock_t start, finish;
 	double duration = 0.0;
@@ -74,14 +75,14 @@ DWORD WINAPI ProcessClient(LPVOID arg) {
 		}
 
 		printf("파일을 전송 받습니다.\n");
-		getISOTime(buf, sizeof(buf));
-		printf("전송 시각: %s\n", buf);
-		printf("전송하는 파일: %s, 전송하는 파일 크기: %d Byte\n", files.name, files.byte);
+		getISOTime(timeBuffer, sizeof(timeBuffer));
+		printf("받는 시각: %s\n", timeBuffer);
+		printf("전송빋는 파일: %s, 전송받는 파일 크기: %d Byte\n", files.name, files.byte);
 		printf("\n클라이언트로 부터 파일을 전송 받는 중 입니다.\n");
 
 		fp = fopen(files.name, "wb");
 
-		count = files.byte / BUFSIZE;
+		count = per = files.byte / BUFSIZE;
 
 		start = clock();
 
@@ -94,8 +95,16 @@ DWORD WINAPI ProcessClient(LPVOID arg) {
 				err_display("recv()");
 				exit(1);
 			}
-
-			// 파일 작성 작업
+			if (sizeof(buf) - 1 != BUFSIZE)
+			{
+				printf("파일 받기 에러 발생\n");
+				return 0;
+				
+			}
+			
+			if (((per - count) * 100 / per) % 10 == 0)
+				printf(".");
+			
 			fwrite(buf, 1, BUFSIZE, fp);
 
 			count--;
@@ -119,8 +128,8 @@ DWORD WINAPI ProcessClient(LPVOID arg) {
 		finish = clock();
 
 		printf("\n파일 전송이 완료 되었습니다.\n");
-		getISOTime(buf, sizeof(buf));
-		printf("완료 시각: %s\n", buf);
+		getISOTime(timeBuffer, sizeof(timeBuffer));
+		printf("완료 시각: %s\n", timeBuffer);
 
 		duration = (double)(finish - start) / CLOCKS_PER_SEC;
 		minute = duration / 60;

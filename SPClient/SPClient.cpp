@@ -118,7 +118,6 @@ int main(int argc, char *argv[])
 
 		printf("\n진행도: %d % %", (per - count) * 100 / per, per);
 
-
 		count--;
 
 	}
