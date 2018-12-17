@@ -22,6 +22,9 @@ void err_display(const char *);
 // 사용자 정의 데이터 수신 함수
 int recvn(SOCKET, char *, int, int);
 
+// 시간 출력 함수
+void getISOTime(char *, size_t);
+
 // 파일 기본 정보
 typedef struct Files
 {
@@ -37,6 +40,7 @@ DWORD WINAPI ProcessClient(LPVOID arg) {
 	int addrlen;
 	char buf[BUFSIZE + 1];
 	unsigned int count;
+	char timeBuffer[80];
 
 	addrlen = sizeof(clientaddr);
 
@@ -67,6 +71,8 @@ DWORD WINAPI ProcessClient(LPVOID arg) {
 		}
 
 		printf("파일을 전송 받습니다.\n");
+		getISOTime(buf, sizeof(buf));
+		printf("전송 시각: %s\n", buf);
 		printf("전송하는 파일: %s, 전송하는 파일 크기: %d Byte\n", files.name, files.byte);
 		printf("\n클라이언트로 부터 파일을 전송 받는 중 입니다.\n");
 
@@ -106,6 +112,8 @@ DWORD WINAPI ProcessClient(LPVOID arg) {
 		fclose(fp);
 
 		printf("\n파일 전송이 완료 되었습니다.\n");
+		getISOTime(buf, sizeof(buf));
+		printf("완료 시각: %s\n", buf);
 
 		closesocket(client_sock);
 
@@ -229,6 +237,20 @@ int recvn(SOCKET s, char *buf, int len, int flags)
 	}
 
 	return (len - left);
+}
+
+void getISOTime(char* buffer, size_t bufferSize) {
+	struct tm t;
+	time_t timer;
+
+	timer = time(NULL);    // 현재 시각을 초 단위로 얻기
+	localtime_s(&t, &timer); // 초 단위의 시간을 분리하여 구조체에 넣기
+
+
+	sprintf_s(buffer, bufferSize, "%04d-%02d-%02d %02d:%02d:%02d",
+		t.tm_year + 1900, t.tm_mon + 1, t.tm_mday,
+		t.tm_hour, t.tm_min, t.tm_sec
+	);
 }
 // 프로그램 실행: <Ctrl+F5> 또는 [디버그] > [디버깅하지 않고 시작] 메뉴
 // 프로그램 디버그: <F5> 키 또는 [디버그] > [디버깅 시작] 메뉴
