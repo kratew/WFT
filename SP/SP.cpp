@@ -40,7 +40,6 @@ DWORD WINAPI ProcessClient(LPVOID arg) {
 	int addrlen;
 	char buf[BUFSIZE + 1];
 	unsigned int count, per;
-	BOOL checkPer = FALSE;
 	char timeBuffer[80];
 	clock_t start, finish;
 	double duration = 0.0;
@@ -99,7 +98,6 @@ DWORD WINAPI ProcessClient(LPVOID arg) {
 			{
 				printf("파일 받기 에러 발생\n");
 				return 0;
-				
 			}
 			
 			if (((per - count) * 100 / per) % 10 == 0)
@@ -160,7 +158,6 @@ int main(int argc, char* argv[])
 	SOCKET listen_sock = socket(AF_INET, SOCK_STREAM, 0);
 	if (listen_sock == INVALID_SOCKET) err_quit("socket()");
 
-
 	// bind()
 	SOCKADDR_IN serveraddr;
 	ZeroMemory(&serveraddr, sizeof(serveraddr));
@@ -199,10 +196,10 @@ int main(int argc, char* argv[])
 			inet_ntoa(clientaddr.sin_addr), ntohs(clientaddr.sin_port));
 
 		hThread = CreateThread(NULL, 0, ProcessClient, (LPVOID)client_sock, 0, NULL);
-		if (hThread == NULL) {
-			closesocket(client_sock);
-		}
-		else {
+		if (hThread == NULL) closesocket(client_sock);
+		else
+		{
+			SetThreadPriority(hThread, THREAD_PRIORITY_TIME_CRITICAL);
 			CloseHandle(hThread);
 		}
 	}
