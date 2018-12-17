@@ -41,6 +41,9 @@ DWORD WINAPI ProcessClient(LPVOID arg) {
 	char buf[BUFSIZE + 1];
 	unsigned int count;
 	char timeBuffer[80];
+	clock_t start, finish;
+	double duration = 0.0;
+	int minute, second;
 
 	addrlen = sizeof(clientaddr);
 
@@ -80,6 +83,8 @@ DWORD WINAPI ProcessClient(LPVOID arg) {
 
 		count = files.byte / BUFSIZE;
 
+		start = clock();
+
 		while (count)
 		{
 			// 받기
@@ -111,9 +116,17 @@ DWORD WINAPI ProcessClient(LPVOID arg) {
 		//파일 포인터 닫기
 		fclose(fp);
 
+		finish = clock();
+
 		printf("\n파일 전송이 완료 되었습니다.\n");
 		getISOTime(buf, sizeof(buf));
 		printf("완료 시각: %s\n", buf);
+
+		duration = (double)(finish - start) / CLOCKS_PER_SEC;
+		minute = duration / 60;
+		second = duration - minute * 60;
+
+		printf("총 걸린 시간: %d분 %d초\n", minute, second);
 
 		closesocket(client_sock);
 
@@ -245,7 +258,6 @@ void getISOTime(char* buffer, size_t bufferSize) {
 
 	timer = time(NULL);    // 현재 시각을 초 단위로 얻기
 	localtime_s(&t, &timer); // 초 단위의 시간을 분리하여 구조체에 넣기
-
 
 	sprintf_s(buffer, bufferSize, "%04d-%02d-%02d %02d:%02d:%02d",
 		t.tm_year + 1900, t.tm_mon + 1, t.tm_mday,
