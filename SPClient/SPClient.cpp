@@ -14,9 +14,16 @@
 #define SERVERPORT 9000
 #define BUFSIZE 1020000
 
+// 소켓 함수 오류 출력 후 종료
 void err_quit(const char *);
+
+// 소켓 함수 오류 출력
 void err_display(const char *);
+
+// 사용자 정의 데이터 수신 함수
 int recvn(SOCKET, char *, int, int);
+
+// 파일 기본 정보
 typedef struct Files
 {
 	char name[255];
@@ -25,8 +32,10 @@ typedef struct Files
 
 int main(int argc, char *argv[])
 {
+	// (파일크기 / 버퍼 사이즈) 계산한 값을 while문으로 돌리기 위한 변수
 	unsigned int count;
 
+	// 파일 이름 및 크기 확인
 	FILE *fp;
 	Files files;
 	int i, j;
@@ -48,20 +57,29 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
+	// 파일 끝으로 위치 옮김
 	fseek(fp, 0L, SEEK_END);
+
+	// 파일 바이트값 출력
 	files.byte = ftell(fp);
+
+	// 다시 파일 처음으로 위치 옮김
 	fseek(fp, 0L, SEEK_SET);
 
+	// send, recv 함수 출력값 저장용
 	int retval;
 
+	// 윈속 초기화
 	WSADATA wsa;
 	if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0)
 		return 1;
 
+	// socket()
 	SOCKET sock = socket(AF_INET, SOCK_STREAM, 0);
 	if (sock == INVALID_SOCKET) err_quit("socket()");
 
-	SOCKADDR_IN serveraddr;
+	// connect()
+	SOCKADDR_IN serveraddr;	// 서버와 통신용 소켓
 	ZeroMemory(&serveraddr, sizeof(serveraddr));
 	serveraddr.sin_family = AF_INET;
 	serveraddr.sin_addr.s_addr = inet_addr(SERVERIP);
@@ -69,8 +87,10 @@ int main(int argc, char *argv[])
 	retval = connect(sock, (SOCKADDR *)&serveraddr, sizeof(serveraddr));
 	if (retval == SOCKET_ERROR) err_quit("connect()");
 
-	char buf[BUFSIZE];
+	// 데이터 통신에 사용할 변수
+	char buf[BUFSIZE];	// 보낼 데이터를 저장할 공간
 
+	// 파일 기본 정보 전송
 	retval = send(sock, (char *)&files, sizeof(files), 0);
 	if (retval == SOCKET_ERROR)
 	{
@@ -85,9 +105,10 @@ int main(int argc, char *argv[])
 		system("cls");
 		printf("전송하는 파일: %s, 전송하는 파일 크기: %d Byte\n", files.name, files.byte);
 
-
+		// 파일 읽어서 버퍼에 저장
 		fread(buf, 1, BUFSIZE, fp);
 
+		// 전송
 		retval = send(sock, buf, BUFSIZE, 0);
 		if (retval == SOCKET_ERROR)
 		{
@@ -102,6 +123,7 @@ int main(int argc, char *argv[])
 
 	}
 
+	// 남은 파일 크기만큼 나머지 전송
 	count = files.byte - (per * BUFSIZE);
 	fread(buf, 1, count, fp);
 

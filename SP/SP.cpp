@@ -13,9 +13,16 @@
 #define SERVERPORT 9000
 #define BUFSIZE 1020000
 
+// 소켓 함수 오류 출력 후 종료
 void err_quit(const char *);
+
+// 소켓 함수 오류 출력
 void err_display(const char *);
+
+// 사용자 정의 데이터 수신 함수
 int recvn(SOCKET, char *, int, int);
+
+// 파일 기본 정보
 typedef struct Files
 {
 	char name[255];
@@ -35,6 +42,7 @@ DWORD WINAPI ProcessClient(LPVOID arg) {
 
 	getpeername(client_sock, (SOCKADDR*)&clientaddr, &addrlen);
 	while (1) {
+		// 클라이언트로부터 파일 기본 정보 받기
 		FILE *fp = NULL;
 		Files files;
 
@@ -45,6 +53,7 @@ DWORD WINAPI ProcessClient(LPVOID arg) {
 			exit(1);
 		}
 
+		// 기존 파일 여부 확인
 		fp = fopen(files.name, "rb");
 		if (fp == NULL)
 			printf("같은 파일 이름이 없으므로 전송을 진행합니다.\n");
@@ -67,6 +76,7 @@ DWORD WINAPI ProcessClient(LPVOID arg) {
 
 		while (count)
 		{
+			// 받기
 			retval = recvn(client_sock, buf, BUFSIZE, 0);
 			if (retval == SOCKET_ERROR)
 			{
@@ -74,11 +84,13 @@ DWORD WINAPI ProcessClient(LPVOID arg) {
 				exit(1);
 			}
 
+			// 파일 작성 작업
 			fwrite(buf, 1, BUFSIZE, fp);
 
 			count--;
 		}
 
+		// 남은 파일 크기만큼 나머지 받기
 		count = files.byte - ((files.byte / BUFSIZE) * BUFSIZE);
 
 		retval = recvn(client_sock, buf, BUFSIZE, 0);
@@ -90,6 +102,7 @@ DWORD WINAPI ProcessClient(LPVOID arg) {
 
 		fwrite(buf, 1, count, fp);
 
+		//파일 포인터 닫기
 		fclose(fp);
 
 		printf("\n파일 전송이 완료 되었습니다.\n");
@@ -102,36 +115,47 @@ DWORD WINAPI ProcessClient(LPVOID arg) {
 
 int main(int argc, char* argv[])
 {
+	// send, recv 함수 출력값 저장용
 	int retval;
+
+	// (파일 크기 / 버퍼 사이즈) 계산한 값을 while문으로 돌리기 위한 변수
 	unsigned int count;
 
+	// 윈속 초기화
 	WSADATA wsa;
 	if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0)
 		return 1;
 
+	// socket()
 	SOCKET listen_sock = socket(AF_INET, SOCK_STREAM, 0);
 	if (listen_sock == INVALID_SOCKET) err_quit("socket()");
 
+
+	// bind()
 	SOCKADDR_IN serveraddr;
 	ZeroMemory(&serveraddr, sizeof(serveraddr));
 	serveraddr.sin_family = AF_INET;
 	serveraddr.sin_addr.s_addr = htonl(INADDR_ANY);
 	serveraddr.sin_port = htons(SERVERPORT);
-
 	retval = bind(listen_sock, (SOCKADDR*)&serveraddr, sizeof(serveraddr));
 	if (retval == SOCKET_ERROR) err_quit("bind()");
 
+	// listen()
 	retval = listen(listen_sock, SOMAXCONN);
 	if (retval == SOCKET_ERROR) err_quit("listen()");
 
-	SOCKET client_sock;
-	SOCKADDR_IN clientaddr;
-	int addrlen;
-	char buf[BUFSIZE];
+	// 서버 대기 상태 완료 =========================================
+
+	// 데이터 통신에 사용할 변수
+	SOCKET client_sock;	// 클라이언트 저장 소켓
+	SOCKADDR_IN clientaddr;	// 클라이언트 주소 저장
+	int addrlen;	// 주소 길이
+	char buf[BUFSIZE];	// 전송하는 데이터
 	HANDLE hThread;
 
 	while (1)
 	{
+		// accept()
 		addrlen = sizeof(clientaddr);
 		client_sock = accept(listen_sock, (SOCKADDR *)&clientaddr, &addrlen);
 		if (client_sock == INVALID_SOCKET)
@@ -140,6 +164,7 @@ int main(int argc, char* argv[])
 			break;
 		}
 
+		// 접속한 클라이언트 정보 출력
 		printf("\n[TCP 서버] 클라이언트 접속: IP 주소 = %s, 포트 번호 = %d \n",
 			inet_ntoa(clientaddr.sin_addr), ntohs(clientaddr.sin_port));
 
@@ -152,8 +177,10 @@ int main(int argc, char* argv[])
 		}
 	}
 
+	// 소켓 닫기
 	closesocket(listen_sock);
 
+	// 윈속 종료
 	WSACleanup();
 }
 
