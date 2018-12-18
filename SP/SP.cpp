@@ -34,7 +34,7 @@ DWORD WINAPI ProcessClient(LPVOID arg) {
 	int retval;
 	SOCKADDR_IN clientaddr;
 	int addrlen;
-	int recv_buffer = 65535 * 100;
+	int recv_buffer = 65536 * 100;
 	char *buf = new char[recv_buffer + 1];
 	unsigned int count, per;
 	
@@ -93,11 +93,6 @@ DWORD WINAPI ProcessClient(LPVOID arg) {
 				err_display("recv()");
 				exit(1);
 			}
-			//if (sizeof(buf) - 1 != recv_buffer)
-			//{
-			//	printf("파일 받기 에러 발생\n");
-			//	return 0;
-			//}
 			
 			if (((per - count) * 100 / per) % 10 == 0)
 				printf(".");

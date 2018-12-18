@@ -7,10 +7,9 @@
 #include <stdio.h>
 #include <time.h>
 
-#define SERVERIP "192.9.112.218"
+#define SERVERIP "192.168.7.180"
 //#define SERVERIP "127.0.0.1"
 #define SERVERPORT 9000
-//#define BUFSIZE 1000 * 1024
 
 // 소켓 함수 오류 출력 후 종료
 void err_quit(const char *);
@@ -81,7 +80,7 @@ int main(int argc, char *argv[])
 	if (sock == INVALID_SOCKET) err_quit("socket()");
 
 	// setsockopt()
-	int optval, optlen;
+	int optlen;
 
 	// 초기 버퍼값 확인
 	optlen = sizeof(send_buffer);
