@@ -1,7 +1,4 @@
-﻿// client2.cpp : 이 파일에는 'main' 함수가 포함됩니다. 거기서 프로그램 실행이 시작되고 종료됩니다.
-//
-
-#include "pch.h"
+﻿#include "pch.h"
 #pragma comment(lib, "ws2_32")
 #pragma warning(disable:4996)
 #include <WinSock2.h>
@@ -10,9 +7,10 @@
 #include <stdio.h>
 #include <time.h>
 
-#define SERVERIP "127.0.0.1"
+#define SERVERIP "192.9.112.218"
+//#define SERVERIP "127.0.0.1"
 #define SERVERPORT 9000
-#define BUFSIZE 1020000
+//#define BUFSIZE 1000 * 1024
 
 // 소켓 함수 오류 출력 후 종료
 void err_quit(const char *);
@@ -34,15 +32,19 @@ int main(int argc, char *argv[])
 {
 	// (파일크기 / 버퍼 사이즈) 계산한 값을 while문으로 돌리기 위한 변수
 	unsigned int count;
+	int send_buffer;
 
 	// 파일 이름 및 크기 확인
 	FILE *fp;
 	Files files;
 	int i, j;
 	int sum = 0;
+
+	// 타임스탬프 확인
 	time_t start, end;
 	double result;
-
+	
+	// 전송할 파일 입력
 	do
 	{
 		printf("보낼 파일을 적어 주세요: ");
@@ -78,6 +80,24 @@ int main(int argc, char *argv[])
 	SOCKET sock = socket(AF_INET, SOCK_STREAM, 0);
 	if (sock == INVALID_SOCKET) err_quit("socket()");
 
+	// setsockopt()
+	int optval, optlen;
+
+	// 초기 버퍼값 확인
+	optlen = sizeof(send_buffer);
+	retval = getsockopt(sock, SOL_SOCKET, SO_SNDBUF, (char *)&send_buffer, &optlen);
+	if (retval == SOCKET_ERROR) err_quit("getsockopt()");
+
+	// 송신 버퍼값 재설정
+	send_buffer *= 1000; // 65535 * 1000
+	retval = setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (char *)&send_buffer, sizeof(send_buffer));
+	if (retval == SOCKET_ERROR) err_quit("setsockopt()");
+	
+	// 재설정한 버퍼값 확인
+	optlen = sizeof(send_buffer);
+	retval = getsockopt(sock, SOL_SOCKET, SO_SNDBUF, (char *)&send_buffer, &optlen);
+	if (retval == SOCKET_ERROR) err_quit("getsockopt()");
+
 	// connect()
 	SOCKADDR_IN serveraddr;	// 서버와 통신용 소켓
 	ZeroMemory(&serveraddr, sizeof(serveraddr));
@@ -88,7 +108,7 @@ int main(int argc, char *argv[])
 	if (retval == SOCKET_ERROR) err_quit("connect()");
 
 	// 데이터 통신에 사용할 변수
-	char buf[BUFSIZE];	// 보낼 데이터를 저장할 공간
+	char *buf = new char[send_buffer];	// 보낼 데이터를 저장할 공간
 
 	// 파일 기본 정보 전송
 	retval = send(sock, (char *)&files, sizeof(files), 0);
@@ -99,34 +119,34 @@ int main(int argc, char *argv[])
 	}
 
 	unsigned int per;
-	per = count = files.byte / BUFSIZE;
+	per = count = files.byte / send_buffer;
 	while (count)
 	{
 		system("cls");
 		printf("전송하는 파일: %s, 전송하는 파일 크기: %d Byte\n", files.name, files.byte);
 
 		// 파일 읽어서 버퍼에 저장
-		fread(buf, 1, BUFSIZE, fp);
+		fread(buf, 1, send_buffer, fp);
 
 		// 전송
-		retval = send(sock, buf, BUFSIZE, 0);
+		retval = send(sock, buf, send_buffer, 0);
 		if (retval == SOCKET_ERROR)
 		{
 			err_display("send()");
 			exit(1);
 		}
 
-		printf("\n진행도: %d % %", (per - count) * 100 / per, per);
+		//printf("\n진행도: %d % %", (per - count) * 100 / per, per);
 
 		count--;
 
 	}
 
 	// 남은 파일 크기만큼 나머지 전송
-	count = files.byte - (per * BUFSIZE);
+	count = files.byte - (per * send_buffer);
 	fread(buf, 1, count, fp);
 
-	retval = send(sock, buf, BUFSIZE, 0);
+	retval = send(sock, buf, send_buffer, 0);
 	if (retval == SOCKET_ERROR)
 	{
 		err_display("send()");
@@ -195,14 +215,3 @@ int recvn(SOCKET s, char *buf, int len, int flags)
 
 	return (len - left);
 }
-
-// 프로그램 실행: <Ctrl+F5> 또는 [디버그] > [디버깅하지 않고 시작] 메뉴
-// 프로그램 디버그: <F5> 키 또는 [디버그] > [디버깅 시작] 메뉴
-
-// 시작을 위한 팁: 
-//   1. [솔루션 탐색기] 창을 사용하여 파일을 추가/관리합니다.
-//   2. [팀 탐색기] 창을 사용하여 소스 제어에 연결합니다.
-//   3. [출력] 창을 사용하여 빌드 출력 및 기타 메시지를 확인합니다.
-//   4. [오류 목록] 창을 사용하여 오류를 봅니다.
-//   5. [프로젝트] > [새 항목 추가]로 이동하여 새 코드 파일을 만들거나, [프로젝트] > [기존 항목 추가]로 이동하여 기존 코드 파일을 프로젝트에 추가합니다.
-//   6. 나중에 이 프로젝트를 다시 열려면 [파일] > [열기] > [프로젝트]로 이동하고 .sln 파일을 선택합니다.

@@ -1,7 +1,4 @@
-﻿// server1.cpp : 이 파일에는 'main' 함수가 포함됩니다. 거기서 프로그램 실행이 시작되고 종료됩니다.
-//
-
-#include "pch.h"
+﻿#include "pch.h"
 #pragma comment(lib, "ws2_32")
 #pragma warning(disable:4996)
 #include <WinSock2.h>
@@ -11,7 +8,6 @@
 #include <time.h>
 
 #define SERVERPORT 9000
-#define BUFSIZE 1020000
 
 // 소켓 함수 오류 출력 후 종료
 void err_quit(const char *);
@@ -38,8 +34,11 @@ DWORD WINAPI ProcessClient(LPVOID arg) {
 	int retval;
 	SOCKADDR_IN clientaddr;
 	int addrlen;
-	char buf[BUFSIZE + 1];
+	int recv_buffer = 65535 * 100;
+	char *buf = new char[recv_buffer + 1];
 	unsigned int count, per;
+	
+	// 타임스탬프 확인
 	char timeBuffer[80];
 	clock_t start, finish;
 	double duration = 0.0;
@@ -81,37 +80,37 @@ DWORD WINAPI ProcessClient(LPVOID arg) {
 
 		fp = fopen(files.name, "wb");
 
-		count = per = files.byte / BUFSIZE;
+		count = per = files.byte / recv_buffer;
 
 		start = clock();
 
 		while (count)
 		{
 			// 받기
-			retval = recvn(client_sock, buf, BUFSIZE, 0);
+			retval = recvn(client_sock, buf, recv_buffer, 0);
 			if (retval == SOCKET_ERROR)
 			{
 				err_display("recv()");
 				exit(1);
 			}
-			if (sizeof(buf) - 1 != BUFSIZE)
-			{
-				printf("파일 받기 에러 발생\n");
-				return 0;
-			}
+			//if (sizeof(buf) - 1 != recv_buffer)
+			//{
+			//	printf("파일 받기 에러 발생\n");
+			//	return 0;
+			//}
 			
 			if (((per - count) * 100 / per) % 10 == 0)
 				printf(".");
 			
-			fwrite(buf, 1, BUFSIZE, fp);
+			fwrite(buf, 1, recv_buffer, fp);
 
 			count--;
 		}
 
 		// 남은 파일 크기만큼 나머지 받기
-		count = files.byte - ((files.byte / BUFSIZE) * BUFSIZE);
+		count = files.byte - ((files.byte / recv_buffer) * recv_buffer);
 
-		retval = recvn(client_sock, buf, BUFSIZE, 0);
+		retval = recvn(client_sock, buf, recv_buffer, 0);
 		if (retval == SOCKET_ERROR)
 		{
 			err_display("recv()");
@@ -167,6 +166,24 @@ int main(int argc, char* argv[])
 	retval = bind(listen_sock, (SOCKADDR*)&serveraddr, sizeof(serveraddr));
 	if (retval == SOCKET_ERROR) err_quit("bind()");
 
+	// setsockopt()
+	int optval, optlen;
+
+	// 초기 버퍼값 확인
+	optlen = sizeof(optval);
+	retval = getsockopt(listen_sock, SOL_SOCKET, SO_RCVBUF, (char *)&optval, &optlen);
+	if (retval == SOCKET_ERROR) err_quit("getsockopt()");
+
+	// 수신 버퍼값 재설정
+	optval *= 1000;
+	retval = setsockopt(listen_sock, SOL_SOCKET, SO_RCVBUF, (char *)&optval, sizeof(optval));
+	if (retval == SOCKET_ERROR) err_quit("setsockopt()");
+
+	// 재설정한 버퍼값 확인
+	optlen = sizeof(optval);
+	retval = getsockopt(listen_sock, SOL_SOCKET, SO_RCVBUF, (char *)&optval, &optlen);
+	if (retval == SOCKET_ERROR) err_quit("getsockopt()");
+
 	// listen()
 	retval = listen(listen_sock, SOMAXCONN);
 	if (retval == SOCKET_ERROR) err_quit("listen()");
@@ -177,7 +194,6 @@ int main(int argc, char* argv[])
 	SOCKET client_sock;	// 클라이언트 저장 소켓
 	SOCKADDR_IN clientaddr;	// 클라이언트 주소 저장
 	int addrlen;	// 주소 길이
-	char buf[BUFSIZE];	// 전송하는 데이터
 	HANDLE hThread;
 
 	while (1)
@@ -270,13 +286,3 @@ void getISOTime(char* buffer, size_t bufferSize) {
 		t.tm_hour, t.tm_min, t.tm_sec
 	);
 }
-// 프로그램 실행: <Ctrl+F5> 또는 [디버그] > [디버깅하지 않고 시작] 메뉴
-// 프로그램 디버그: <F5> 키 또는 [디버그] > [디버깅 시작] 메뉴
-
-// 시작을 위한 팁: 
-//   1. [솔루션 탐색기] 창을 사용하여 파일을 추가/관리합니다.
-//   2. [팀 탐색기] 창을 사용하여 소스 제어에 연결합니다.
-//   3. [출력] 창을 사용하여 빌드 출력 및 기타 메시지를 확인합니다.
-//   4. [오류 목록] 창을 사용하여 오류를 봅니다.
-//   5. [프로젝트] > [새 항목 추가]로 이동하여 새 코드 파일을 만들거나, [프로젝트] > [기존 항목 추가]로 이동하여 기존 코드 파일을 프로젝트에 추가합니다.
-//   6. 나중에 이 프로젝트를 다시 열려면 [파일] > [열기] > [프로젝트]로 이동하고 .sln 파일을 선택합니다.
