@@ -38,11 +38,7 @@ int main(int argc, char *argv[])
 	Files files;
 	int i, j;
 	int sum = 0;
-
-	// 타임스탬프 확인
-	time_t start, end;
-	double result;
-	
+		
 	// 전송할 파일 입력
 	do
 	{
@@ -84,7 +80,7 @@ int main(int argc, char *argv[])
 
 	// 초기 버퍼값 확인
 	optlen = sizeof(send_buffer);
-	retval = getsockopt(sock, SOL_SOCKET, SO_SNDBUF, (char *)&send_buffer, &optlen);
+	retval = getsockopt(sock, SOL_SOCKET, SO_SNDBUF, (char *)&send_buffer, &optlen);	// 운영체제가 소켓에 할당해준 초기 버퍼값 가져오기.(보내기용)
 	if (retval == SOCKET_ERROR) err_quit("getsockopt()");
 
 	// 송신 버퍼값 재설정

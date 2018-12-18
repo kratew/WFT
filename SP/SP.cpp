@@ -82,7 +82,7 @@ DWORD WINAPI ProcessClient(LPVOID arg) {
 
 		count = per = files.byte / recv_buffer;
 
-		start = clock();
+		start = clock();	// 파일 전송 시작 시간을 start에 저장.
 
 		while (count)
 		{
@@ -117,7 +117,7 @@ DWORD WINAPI ProcessClient(LPVOID arg) {
 		//파일 포인터 닫기
 		fclose(fp);
 
-		finish = clock();
+		finish = clock();	// 파일 전송 완료 시간을 finish에 저장.
 
 		printf("\n파일 전송이 완료 되었습니다.\n");
 		getISOTime(timeBuffer, sizeof(timeBuffer));
@@ -165,9 +165,9 @@ int main(int argc, char* argv[])
 	int optval, optlen;
 
 	// 초기 버퍼값 확인
-	optlen = sizeof(optval);
-	retval = getsockopt(listen_sock, SOL_SOCKET, SO_RCVBUF, (char *)&optval, &optlen);
-	if (retval == SOCKET_ERROR) err_quit("getsockopt()");
+	optlen = sizeof(optval);	// 65536
+	retval = getsockopt(listen_sock, SOL_SOCKET, SO_RCVBUF, (char *)&optval, &optlen);	// 운영체제가 소켓에 할당해준 초기 버퍼값 가져오기.
+	if (retval == SOCKET_ERROR) err_quit("getsockopt()");	// 에러핸들링
 
 	// 수신 버퍼값 재설정
 	optval *= 1000;
@@ -206,7 +206,7 @@ int main(int argc, char* argv[])
 		printf("\n[TCP 서버] 클라이언트 접속: IP 주소 = %s, 포트 번호 = %d \n",
 			inet_ntoa(clientaddr.sin_addr), ntohs(clientaddr.sin_port));
 
-		hThread = CreateThread(NULL, 0, ProcessClient, (LPVOID)client_sock, 0, NULL);
+		hThread = CreateThread(NULL, 0, ProcessClient, (LPVOID)client_sock, 0, NULL);	// 쓰레드 생성.
 		if (hThread == NULL) closesocket(client_sock);
 		else
 		{
@@ -269,6 +269,7 @@ int recvn(SOCKET s, char *buf, int len, int flags)
 	return (len - left);
 }
 
+// 시간함수 정의.
 void getISOTime(char* buffer, size_t bufferSize) {
 	struct tm t;
 	time_t timer;
